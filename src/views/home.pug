@@ -7,6 +7,12 @@ html(lang="en")
         header
             h1 It works!!
         main
-            h2 welcome
+            form#nick
+                input(type="text", placeholder="choose a nickname", required=true)
+                button Save
+            ul
+            form#message
+                input(type="text", placeholder="message", required=true)
+                button send
         button Call
         script(src="/public/js/app.js")
