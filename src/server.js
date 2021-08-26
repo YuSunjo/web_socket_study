@@ -1,6 +1,6 @@
 import express from 'express';
 import http from "http";
-import WebSocket from "ws";
+import SocketIO from "socket.io";
 
 const app = express();
 
@@ -13,28 +13,28 @@ app.use('/public', express.static(__dirname + '/public'));
 app.get('/', (req, res) => res.render("home"));
 const handleListen = () => console.log(`listening on 3000 port`);
 
-const server = http.createServer(app);
-const wss = new WebSocket.Server({server})
+const httpServer = http.createServer(app);
+const wsServer = SocketIO(httpServer);
 
-const sockets = [];
-
-wss.on("connection", (socket) => {
-    sockets.push(socket);
-    socket["nickname"] = "nicolo";
-    console.log("Connected to Browser");
-    socket.on("close", () => console.log("Disconnected from Server"));
-    socket.on("message", (msg) => {
-        const message = JSON.parse(msg);
-        switch (message.type) {
-            case "new_message":
-                sockets.forEach((aSocket) => aSocket.send(`${socket.nickname} : ${message.payload}`));
-            case "nickname":
-                console.log(message.payload);
-                socket["nickname"] = message.payload;
-        }
+// done 은 백엔드가 실행시키는 것임
+wsServer.on("connection", socket => {
+    socket.onAny((event) => {
+        console.log(`Socket Event: ${event}`)
     })
-    socket.send("hello!!!");
-});
+    socket.on("enter_room", (roomName, done) => {
+        // socket.id로 구분 socket이 어떤 방에 있는지 알 수 있음
+        console.log(socket.id);
+        console.log(socket.rooms);
+        console.log(roomName);
+        // chat room 같은 개념
+        socket.join(roomName)
+        console.log(socket.rooms)
+        setTimeout(() => {
+            console.log(roomName);
+            done("헬로");
+        }, 10000);
+    });
+})
 
 
-server.listen(3000, handleListen);
+httpServer.listen(3000, handleListen);
