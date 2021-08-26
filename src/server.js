@@ -22,17 +22,9 @@ wsServer.on("connection", socket => {
         console.log(`Socket Event: ${event}`)
     })
     socket.on("enter_room", (roomName, done) => {
-        // socket.id로 구분 socket이 어떤 방에 있는지 알 수 있음
-        console.log(socket.id);
-        console.log(socket.rooms);
-        console.log(roomName);
-        // chat room 같은 개념
-        socket.join(roomName)
-        console.log(socket.rooms)
-        setTimeout(() => {
-            console.log(roomName);
-            done("헬로");
-        }, 10000);
+        socket.join(roomName);
+        done();
+        socket.to(roomName).emit("welcome");
     });
 })
 
