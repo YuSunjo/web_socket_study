@@ -106,18 +106,19 @@ const welcome = document.getElementById("welcome");
 const welcomeForm = welcome.querySelector("form");
 
 
-async function startMedia() {
+async function initCall() {
     welcome.hidden = true;
     call.hidden = false;
     await getMedia();
     makeConnection();
 }
 
-function handleWelcomeSubmit(event) {
+async function handleWelcomeSubmit(event) {
     event.preventDefault();
     const input = welcome.querySelector("input");
     console.log(input.value);
-    socket.emit("join_room", input.value, startMedia);
+    await initCall();
+    socket.emit("join_room", input.value);
     roomName = input.value;
     input.value = "";
 
@@ -136,9 +137,16 @@ socket.on("welcome", async () => {
 })
 
 // 비동기여서 myPeerConnection이 없음
-socket.on("offer", offer => {
+socket.on("offer", async offer => {
     console.log(offer);
-    myPeerConnection.setRemoteDescription(offer);
+    await myPeerConnection.setRemoteDescription(offer);
+    const answer = await myPeerConnection.createAnswer();
+    await myPeerConnection.setLocalDescription(answer);
+    socket.emit("answer", answer, roomName);
+})
+
+socket.on("answer", answer => {
+    myPeerConnection.setRemoteDescription(answer);
 })
 
 // RTC Code
