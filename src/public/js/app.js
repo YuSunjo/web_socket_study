@@ -93,6 +93,12 @@ function handleCameraClick() {
 
 async function handleCameraChange() {
     await getMedia(camerasSelect.value)
+    if (myPeerConnection) {
+        const videoTrack = myStream.getVideoTracks()[0];
+        const videoSender = myPeerConnection.getSenders()
+            .find(sender => sender.track.kind === "video");
+        videoSender.replaceTrack(videoTrack)
+    }
 }
 
 muteBtn.addEventListener("click", handleMuteClick);
@@ -143,16 +149,51 @@ socket.on("offer", async offer => {
     const answer = await myPeerConnection.createAnswer();
     await myPeerConnection.setLocalDescription(answer);
     socket.emit("answer", answer, roomName);
+    console.log("send answer");
 })
 
 socket.on("answer", answer => {
+    console.log("recieve answer");
     myPeerConnection.setRemoteDescription(answer);
+})
+
+socket.on("ice", (ice) => {
+    console.log("recieve candidate");
+    myPeerConnection.addIceCandidate(ice);
 })
 
 // RTC Code
 function makeConnection() {
-    myPeerConnection = new RTCPeerConnection();
+    myPeerConnection = new RTCPeerConnection({
+        iceServers: [
+            {
+                urls: [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun3.l.google.com:19302",
+                    "stun:stun4.l.google.com:19302",
+                ]
+            }
+        ]
+    });
     console.log(myStream.getTracks())  // 오디오, 비디오 트랙이있음
+    myPeerConnection.addEventListener("icecandidate", handleIce);
+    myPeerConnection.addEventListener("addstream", handleAddStream);
     myStream.getTracks().forEach(track => myPeerConnection.addTrack(track, myStream));
 
+}
+
+function handleIce(data) {
+    socket.emit("ice", data.candidate, roomName);
+    console.log(handleIce);
+    console.log(data);
+}
+
+function handleAddStream(data) {
+    console.log(data);
+    console.log("peer's stream", data.stream);
+    console.log("my stream", myStream);
+    const peerFace = document.getElementById("peerFace");
+    peerFace.srcObject = data.stream;
 }
