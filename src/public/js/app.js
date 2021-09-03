@@ -5,9 +5,15 @@ const muteBtn = document.getElementById("mute");
 const cameraBtn = document.getElementById("camera");
 const camerasSelect = document.getElementById("cameras");
 
+const call = document.getElementById("call");
+
+call.hidden = true;
+
 let myStream;
 let muted = false;
 let cameraOff = false;
+let roomName;
+let myPeerConnection;
 
 async function getCameras() {
     try {
@@ -57,8 +63,6 @@ async function getMedia(deviceId) {
     }
 }
 
-getMedia();
-
 function handleMuteClick() {
     console.log(myStream.getAudioTracks());
     myStream
@@ -94,3 +98,53 @@ async function handleCameraChange() {
 muteBtn.addEventListener("click", handleMuteClick);
 cameraBtn.addEventListener("click", handleCameraClick);
 camerasSelect.addEventListener("input", handleCameraChange);
+
+
+// welcome form (
+
+const welcome = document.getElementById("welcome");
+const welcomeForm = welcome.querySelector("form");
+
+
+async function startMedia() {
+    welcome.hidden = true;
+    call.hidden = false;
+    await getMedia();
+    makeConnection();
+}
+
+function handleWelcomeSubmit(event) {
+    event.preventDefault();
+    const input = welcome.querySelector("input");
+    console.log(input.value);
+    socket.emit("join_room", input.value, startMedia);
+    roomName = input.value;
+    input.value = "";
+
+}
+
+welcomeForm.addEventListener("submit", handleWelcomeSubmit);
+
+
+socket.on("welcome", async () => {
+    console.log("someone joined");
+    const offer = await myPeerConnection.createOffer();
+    await myPeerConnection.setLocalDescription(offer);
+    console.log(offer);
+    console.log("send offer")
+    socket.emit("offer", offer, roomName);
+})
+
+// 비동기여서 myPeerConnection이 없음
+socket.on("offer", offer => {
+    console.log(offer);
+    myPeerConnection.setRemoteDescription(offer);
+})
+
+// RTC Code
+function makeConnection() {
+    myPeerConnection = new RTCPeerConnection();
+    console.log(myStream.getTracks())  // 오디오, 비디오 트랙이있음
+    myStream.getTracks().forEach(track => myPeerConnection.addTrack(track, myStream));
+
+}
